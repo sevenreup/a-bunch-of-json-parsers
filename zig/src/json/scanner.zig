@@ -60,16 +60,18 @@ pub const Scanner = struct {
                 '"' => {
                     self.cursor += 1;
                     self.value_start = self.cursor;
+                    var last_value: usize = 0;
                     while (true) {
                         const c = try self.getByte();
                         if (c == '"') {
+                            last_value = self.cursor;
                             self.cursor += 1;
                             break;
                         }
                         self.cursor += 1;
                     }
                     self.state = State.value;
-                    return .{ .string = self.input[self.value_start..self.cursor] };
+                    return .{ .string = self.input[self.value_start..last_value] };
                 },
                 '}' => {
                     self.state = State.object_end;
