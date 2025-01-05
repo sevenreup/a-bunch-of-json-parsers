@@ -36,6 +36,10 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    const zig_aio = b.dependency("zig-aio", .{});
+    exe.root_module.addImport("aio", zig_aio.module("aio"));
+    exe.root_module.addImport("coro", zig_aio.module("coro"));
+    
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
     // step when running `zig build`).
@@ -79,6 +83,12 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+
+    exe_unit_tests.root_module.addImport("aio", zig_aio.module("aio"));
+    exe_unit_tests.root_module.addImport("coro", zig_aio.module("coro"));
+
+    lib_unit_tests.root_module.addImport("aio", zig_aio.module("aio"));
+    lib_unit_tests.root_module.addImport("coro", zig_aio.module("coro"));
 
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
 

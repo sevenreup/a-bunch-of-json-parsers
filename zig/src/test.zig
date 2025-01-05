@@ -1,6 +1,7 @@
 const std = @import("std");
 const testing = std.testing;
 const json = @import("json/parser.zig");
+const helper = @import("helper.zig");
 
 const TestFailure = struct {
     case_index: usize,
@@ -72,34 +73,40 @@ test "json test caces" {
         defer testing.allocator.free(file_content);
 
         const test_type = getTestType(entry.name);
+        if (test_type == TestType.ignore) {
+            continue;
+        }
 
-        switch (test_type) {
-            .yes => {
-                json.parserAllTokens(testing.allocator, file_content) catch |err| {
-                    try failures.append(TestFailure{
-                        .case_index = failures.items.len,
-                        .input = file_content,
-                        .expected = "no error",
-                        .actual = "error",
-                        .err = err,
-                    });
-                };
-            },
-            .no => {
-                json.parserAllTokens(testing.allocator, file_content) catch {
-                    continue;
-                };
+        const timeout = helper.withTimeout(testing.allocator, file_content, 1000) catch |err| {
+            if (test_type == .yes) {
                 try failures.append(TestFailure{
                     .case_index = failures.items.len,
                     .input = file_content,
-                    .expected = "error",
-                    .actual = "no error",
-                    .err = error.ExpectedError,
+                    .expected = "no error",
+                    .actual = "error",
+                    .err = err,
                 });
-            },
-            .ignore => {
-                continue;
-            },
+            }
+        };
+
+        if (timeout) {
+            try failures.append(TestFailure{
+                .case_index = failures.items.len,
+                .input = file_content,
+                .expected = "no timeout",
+                .actual = "timeout",
+                .err = error.Timeout,
+            });
+            continue;
+        }
+        if (test_type == .no) {
+            try failures.append(TestFailure{
+                .case_index = failures.items.len,
+                .input = file_content,
+                .expected = "error",
+                .actual = "no error",
+                .err = error.ExpectedError,
+            });
         }
     }
 
