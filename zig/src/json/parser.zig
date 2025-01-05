@@ -7,6 +7,18 @@ pub fn parseFromSlice(allocator: std.mem.Allocator, comptime T: type, slice: []c
     return try parseToken(&scanner, T);
 }
 
+pub fn parserAllTokens(allocator: std.mem.Allocator, slice: []const u8) !void {
+    var scanner = json.Scanner.init(allocator, slice);
+    defer scanner.deinit();
+
+    while (true) {
+        const token: json.Token = try scanner.next();
+        if (token == json.Token.end_of_document) {
+            break;
+        }
+    }
+}
+
 fn parseToken(scanner: *json.Scanner, comptime T: type) !T {
     switch (@typeInfo(T)) {
         .Struct => |structInfo| {
