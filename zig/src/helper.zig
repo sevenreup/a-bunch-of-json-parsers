@@ -1,5 +1,4 @@
 const std = @import("std");
-const testing = std.testing;
 const json = @import("json/parser.zig");
 
 fn ThreadContext(comptime T: type) type {
@@ -30,6 +29,35 @@ fn ThreadFn(comptime T: type) type {
             self.context.done.store(true, .release);
         }
     };
+}
+
+pub fn runTest(allocator: std.mem.Allocator, entry_name: []const u8) !bool {
+    const base_path = try std.fs.cwd().realpathAlloc(allocator, "../tests/test_parsing");
+    defer allocator.free(base_path);
+
+    var paths = [_][]const u8{ base_path, entry_name };
+
+    const full_path = try std.fs.path.join(allocator, &paths);
+    defer allocator.free(full_path);
+
+    const file_content = try std.fs.cwd().readFileAlloc(allocator, full_path, std.math.maxInt(usize));
+    defer allocator.free(file_content);
+
+    const timeout = withTimeout(allocator, file_content, 1000) catch {
+        if (std.mem.eql(u8, entry_name[0..2], "y_")) {
+            return false;
+        }
+        return true;
+    };
+    if (timeout) {
+        return false;
+    }
+
+    if (std.mem.eql(u8, entry_name[0..2], "n_")) {
+        return false;
+    }
+
+    return true;
 }
 
 pub fn withTimeout(allocator: std.mem.Allocator, content: []const u8, timeout_ms: u64) !bool {

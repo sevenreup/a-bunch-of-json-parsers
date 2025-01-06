@@ -4,6 +4,20 @@ const std = @import("std");
 // declaratively construct a build graph that will be executed by an external
 // runner.
 pub fn build(b: *std.Build) void {
+    const tool = b.addExecutable(.{
+        .name = "generate_tests",
+        .root_source_file = b.path("tools/generate_tests.zig"),
+        .target = b.host,
+    });
+    const tool_step = b.addRunArtifact(tool);
+    const generated_protocol_file = tool_step.addOutputFileArg("root.zig");
+
+    const wf = b.addWriteFiles();
+    wf.addCopyFileToSource(generated_protocol_file, "src/root.zig");
+
+    const update_protocol_step = b.step("update-tests", "update src/tests.zig to latest");
+    update_protocol_step.dependOn(&wf.step);
+
     // Standard target options allows the person running `zig build` to choose
     // what target to build for. Here we do not override the defaults, which
     // means any target is allowed, and the default is native. Other options
@@ -36,10 +50,6 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const zig_aio = b.dependency("zig-aio", .{});
-    exe.root_module.addImport("aio", zig_aio.module("aio"));
-    exe.root_module.addImport("coro", zig_aio.module("coro"));
-    
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
     // step when running `zig build`).
@@ -83,12 +93,6 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-
-    exe_unit_tests.root_module.addImport("aio", zig_aio.module("aio"));
-    exe_unit_tests.root_module.addImport("coro", zig_aio.module("coro"));
-
-    lib_unit_tests.root_module.addImport("aio", zig_aio.module("aio"));
-    lib_unit_tests.root_module.addImport("coro", zig_aio.module("coro"));
 
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
 
